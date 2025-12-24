@@ -1,6 +1,6 @@
 # Boltz MCP
 
-> Protein structure prediction and affinity prediction tools using the Boltz2 model via MCP (Model Context Protocol)
+> Protein structure and affinity prediction using Boltz2 deep learning models via MCP (Model Context Protocol)
 
 ## Table of Contents
 - [Overview](#overview)
@@ -11,20 +11,20 @@
 - [Using with Gemini CLI](#using-with-gemini-cli)
 - [Available Tools](#available-tools)
 - [Examples](#examples)
-- [Demo Data](#demo-data)
 - [Troubleshooting](#troubleshooting)
 
 ## Overview
 
-The Boltz MCP provides access to cutting-edge protein structure prediction and protein-ligand affinity prediction capabilities using the Boltz2 deep learning model. This MCP server enables both synchronous (quick operations) and asynchronous (background jobs) access to protein structure modeling through an intuitive interface.
+The Boltz MCP provides powerful protein structure prediction and protein-ligand affinity prediction capabilities using the Boltz2 deep learning model. This MCP server enables both quick interactive analysis and long-running batch processing through a unified interface compatible with Claude Code and other MCP-enabled applications.
 
 ### Features
-- **Protein Structure Prediction**: Generate 3D structures from amino acid sequences
-- **Protein-Ligand Affinity Prediction**: Predict binding affinities and complex structures
-- **Batch Processing**: Handle multiple sequences or protein variants simultaneously
-- **Job Management**: Submit, monitor, and manage long-running predictions
-- **Validation Tools**: Validate protein sequences and ligand SMILES strings
-- **Multiple Input Formats**: Support for YAML configurations, raw sequences, and SMILES
+- **Protein Structure Prediction**: Generate 3D protein structures from amino acid sequences using state-of-the-art deep learning
+- **Protein-Ligand Affinity Prediction**: Predict binding affinity and complex structures for protein-ligand interactions
+- **Batch Processing**: Process multiple protein variants or sequences in parallel
+- **Multi-Modal Interface**: Use through both synchronous (quick) and asynchronous (submit/job) APIs
+- **MSA Integration**: Automatic Multiple Sequence Alignment generation for improved accuracy
+- **Inference-Time Potentials**: Enhanced physics-based refinement for higher quality structures
+- **CUDA Acceleration**: GPU support for faster processing on NVIDIA hardware
 
 ### Directory Structure
 ```
@@ -33,17 +33,16 @@ The Boltz MCP provides access to cutting-edge protein structure prediction and p
 ├── env/                    # Conda environment
 ├── src/
 │   ├── server.py           # MCP server
-│   └── jobs/
-│       └── manager.py      # Job management system
+│   └── jobs/               # Job management system
 ├── scripts/
 │   ├── structure_prediction.py    # Protein structure prediction
 │   ├── affinity_prediction.py     # Protein-ligand affinity prediction
-│   └── lib/                       # Shared utilities
+│   └── lib/                # Shared utilities
 ├── examples/
-│   └── data/               # Demo data (12 files)
-├── tests/                  # Test suite
-├── jobs/                   # Job storage directory
-└── repo/                   # Original Boltz repository
+│   └── data/               # Demo data
+├── configs/                # Configuration files (empty)
+├── reports/                # Step documentation
+└── repo/                   # Original Boltz2 repository
 ```
 
 ---
@@ -57,7 +56,7 @@ The Boltz MCP provides access to cutting-edge protein structure prediction and p
 - 16+ GB RAM for large proteins
 - ~10 GB storage for models and temporary data
 
-### Step 1: Create Environment
+Please strictly follow the information in `reports/step3_environment.md` to obtain the procedure to setup the environment. An example workflow is shown below.
 
 ```bash
 # Navigate to the MCP directory
@@ -70,26 +69,20 @@ mamba create -p ./env python=3.10 -y
 # Activate environment
 mamba activate ./env
 # or: conda activate ./env
-```
 
-### Step 2: Install Dependencies
+# Install Boltz2 from the repository
+cd repo/boltz
+pip install -e .
+cd ../..
 
-```bash
 # Install MCP dependencies
-pip install fastmcp loguru
-
-# Install Boltz and other required packages (handled by the original installation)
-# Dependencies are already installed in the conda environment
+pip install fastmcp loguru --ignore-installed
 ```
 
-### Step 3: Verify Installation
-
-```bash
-# Test imports and tool discovery
-python -c "from src.server import mcp; print(f'Found {len(mcp.list_tools())} tools')"
-
-# Should output: Found 13 tools
-```
+**Important Notes:**
+- The environment will be ~5+ GB due to CUDA libraries and PyTorch
+- Models will be downloaded automatically on first use (~2-4 GB additional)
+- Some package downgrades may occur for Boltz2 compatibility (numpy, pyyaml, etc.)
 
 ---
 
@@ -417,18 +410,41 @@ The `examples/data/` directory contains sample data for testing:
 
 | File | Description | Use With |
 |------|-------------|----------|
-| `prot.yaml` | Basic protein structure prediction example | `simple_structure_prediction` |
-| `affinity.yaml` | Protein-ligand affinity prediction example | `simple_affinity_prediction` |
-| `multimer.yaml` | Protein-protein complex prediction | `simple_structure_prediction` |
-| `ligand.yaml` | Multi-ligand complex structure | `simple_affinity_prediction` |
-| `pocket.yaml` | Pocket-constrained binding prediction | `simple_affinity_prediction` |
-| `cyclic_prot.yaml` | Cyclic protein structure prediction | `simple_structure_prediction` |
-| `prot_no_msa.yaml` | Single-sequence mode (no MSA) | `simple_structure_prediction` |
-| `prot_custom_msa.yaml` | Custom MSA usage example | `simple_structure_prediction` |
-| `msa/seq1.a3m` | Multiple sequence alignment data | Used by YAML configs |
-| `msa/seq2.a3m` | Additional MSA data | Used by YAML configs |
+| `affinity.yaml` | Protein-ligand affinity prediction example | `simple_affinity_prediction`, `submit_affinity_prediction` |
+| `cyclic_prot.yaml` | Cyclic protein structure prediction | `simple_structure_prediction`, `submit_structure_prediction` |
 | `ligand.fasta` | Legacy FASTA format example | Convert to sequence param |
+| `ligand.yaml` | Multi-ligand complex structure | `simple_affinity_prediction` |
+| `msa/` | Multiple sequence alignment data directory | Used by YAML configs |
+| `multimer.yaml` | Protein-protein complex prediction | `simple_structure_prediction` |
+| `pocket.yaml` | Pocket-constrained binding prediction | `simple_affinity_prediction` |
+| `prot_custom_msa.yaml` | Custom MSA usage example | `simple_structure_prediction` |
 | `prot.fasta` | Legacy FASTA format example | Convert to sequence param |
+| `prot_no_msa.yaml` | Single-sequence mode (no MSA) | `simple_structure_prediction` |
+| `prot.yaml` | Basic protein structure prediction example | `simple_structure_prediction`, `submit_structure_prediction` |
+
+### Configuration Files
+
+The `configs/` directory is available for configuration templates (currently empty).
+
+### Environment Configuration
+
+Key environment settings are managed through:
+- Conda environment in `./env`
+- Boltz2 model configuration (auto-downloaded)
+- CUDA settings (automatic detection)
+
+### Performance Tuning
+
+```bash
+# For faster but less accurate results
+--use-msa-server=False
+
+# For highest quality (slower)
+--use-potentials=True --use-msa-server=True
+
+# GPU memory optimization (set in environment)
+export CUDA_VISIBLE_DEVICES=0
+```
 
 ---
 
@@ -446,9 +462,20 @@ pip install fastmcp loguru
 
 **Problem:** Import errors
 ```bash
-# Verify installation
-python -c "from src.server import mcp"
-# Should output: Found 13 tools
+# Verify Boltz installation
+python -c "import boltz; print('Boltz installed successfully')"
+
+# Verify MCP server
+python -c "from src.server import mcp; print('MCP server imports successfully')"
+```
+
+**Problem:** CUDA errors
+```bash
+# Check CUDA availability
+python -c "import torch; print(f'CUDA available: {torch.cuda.is_available()}')"
+
+# Use CPU fallback if needed
+export CUDA_VISIBLE_DEVICES=""
 ```
 
 ### MCP Issues
@@ -466,17 +493,17 @@ claude mcp add boltz -- $(pwd)/env/bin/python $(pwd)/src/server.py
 **Problem:** Tools not working
 ```bash
 # Test server directly
+python src/server.py
+# Should start the MCP server without errors
+
+# Test tool listing
 python -c "
 from src.server import mcp
-print(list(mcp.list_tools().keys()))
+print('Available tools:')
+for tool in mcp.list_tools():
+    print(f'- {tool}')
 "
 ```
-
-Expected output should include:
-- `get_job_status`, `get_job_result`, `get_job_log`, `cancel_job`, `list_jobs`
-- `simple_structure_prediction`, `simple_affinity_prediction`
-- `submit_structure_prediction`, `submit_affinity_prediction`, `submit_batch_structure_prediction`
-- `validate_protein_sequence`, `validate_ligand_smiles`, `list_example_data`
 
 ### Job Issues
 
@@ -492,24 +519,43 @@ cat jobs/<job_id>/job.log
 **Problem:** Job failed
 ```
 Use get_job_log with job_id "<job_id>" and tail 100 to see error details
+
+# Common solutions:
+# 1. Check GPU memory: nvidia-smi
+# 2. Verify input format
+# 3. Ensure sufficient disk space
 ```
 
-**Problem:** Out of memory
-- Reduce sequence length or use `use_potentials: False`
-- Ensure sufficient GPU memory (8+ GB VRAM recommended)
-- Use `use_msa_server: False` for faster, less memory-intensive processing
+**Problem:** Out of memory errors
+```bash
+# Use CPU mode
+export CUDA_VISIBLE_DEVICES=""
 
-### Performance Issues
+# Or reduce batch size for batch processing
+# Split large sequence lists into smaller batches
+```
 
-**Problem:** Predictions taking too long
-- For quick results: Use sync API with `use_msa_server: False`
-- For accuracy: Use submit API with `use_potentials: True` and `use_msa_server: True`
-- Check GPU utilization and memory usage
+### Input Validation Issues
 
-**Problem:** Batch processing fails
-- Reduce batch size or process sequences individually
-- Check available disk space for temporary files
-- Monitor job logs for specific error messages
+**Problem:** Invalid protein sequence
+```
+Use validate_protein_sequence with your sequence first
+
+# Common issues:
+# - Non-standard amino acid codes
+# - Whitespace or special characters
+# - Empty or very short sequences
+```
+
+**Problem:** Invalid SMILES string
+```
+Use validate_ligand_smiles with your SMILES first
+
+# Common issues:
+# - Malformed chemical notation
+# - Unsupported chemical elements
+# - Invalid stereochemistry notation
+```
 
 ---
 
@@ -532,7 +578,8 @@ Use get_job_log with job_id "<job_id>" and tail 100 to see error details
 - Use `use_msa_server: False` for faster (but less accurate) results
 - Use `use_potentials: True` only when highest accuracy is needed
 - Batch multiple sequences together rather than individual submissions
-- Monitor jobs with `get_job_log` for debugging failed runs
+- Monitor GPU memory usage with `nvidia-smi`
+- Use appropriate output formats (PDB for compatibility, CIF for precision)
 
 ---
 
@@ -544,8 +591,12 @@ Use get_job_log with job_id "<job_id>" and tail 100 to see error details
 # Activate environment
 mamba activate ./env
 
-# Run tests (if test suite is available)
-python -m pytest tests/ -v
+# Test MCP server
+python src/server.py --help
+
+# Test scripts directly
+python scripts/structure_prediction.py --help
+python scripts/affinity_prediction.py --help
 ```
 
 ### Starting Dev Server
@@ -555,12 +606,19 @@ python -m pytest tests/ -v
 fastmcp dev src/server.py
 ```
 
+### Adding New Tools
+
+1. Add tool function to `src/server.py` with `@mcp.tool()` decorator
+2. Create corresponding script in `scripts/` if needed
+3. Update this README with the new tool documentation
+4. Test thoroughly with both sync and submit APIs
+
 ---
 
 ## License
 
-This MCP is based on the Boltz2 model and follows the original project's license terms.
+Based on the Boltz2 model and repository. Please refer to the original license in `repo/boltz/` for details.
 
 ## Credits
 
-Based on [Boltz](https://github.com/jwohlwend/boltz) - A biomolecular structure prediction model
+Based on [Boltz2](https://github.com/jwohlwend/boltz) - A biomolecular structure prediction model
